@@ -1,0 +1,5 @@
+.env
+.keep
+node_modules/
+genTest/
+coverage/

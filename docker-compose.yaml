@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+    # 0809: Migrate to RDS
+    # MySQL 服務
+    # mysql:
+    #     image: mysql:8
+    #     environment:
+    #         MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    #         MYSQL_DATABASE: ${MYSQL_DATABASE}
+    #         MYSQL_USER: ${MYSQL_USER}
+    #         MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    #     volumes:
+    #         - docker-db:/var/lib/mysql
+    #         - ./mysql/CanChu.sql:/docker-entrypoint-initdb.d/CanChu.sql
+    #     ports:
+    #         - "3306:3306"
+    #     networks:
+    #         - proxy
+
+    # NGINX
+    nginx:
+        image: nginx:stable-alpine3.17
+        restart: always
+        environment:
+          SERVER_NAME: ${SERVER_NAME}
+          NGINX_HOST: ${NGINX_HOST}
+          PORT: ${PORT}
+        ports:
+            - "443:443"
+            - "80:80"
+        # command: 
+        volumes:
+            - ./nginx/templates:/etc/nginx/templates:ro
+            - ./ssl/certif.crt:/etc/ssl/certif.crt:ro
+            - ./ssl/private.key:/etc/ssl/private.key:ro
+        depends_on:
+            - express_app
+        networks:
+            - proxy
+
+    # Redis
+    redis:
+        container_name: redis
+        image: redis:alpine3.17
+        restart: always
+        ports:
+            - 6379:6379
+        volumes:
+            - docker-redis:/data
+        networks:
+            - proxy
+          
+    # Express.js 服務
+    express_app:
+        restart: always
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "3000:3000"
+        environment:
+            JWT_SECRET: ${JWT_SECRET}
+            JWT_REFRESH: ${JWT_REFRESH}
+            DB_HOST: ${DB_HOST}
+            DB_PORT: ${DB_PORT}
+            DB_USER: ${DB_USER}
+            DB_PASSWORD: ${DB_PASSWORD}
+            DB_NAME: ${DB_NAME}
+            REDIS_HOST: ${REDIS_HOST}
+            SERVER_NAME: ${SERVER_NAME}
+            NGINX_HOST: ${NGINX_HOST}
+            PORT: ${PORT}
+        depends_on:
+            - redis
+            # - mysql
+        networks:
+            - proxy
+
+networks:
+    proxy:
+        name: canchu
+        driver: bridge
+
+volumes:
+    # docker-db:
+    docker-redis:
+
